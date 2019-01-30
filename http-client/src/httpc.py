@@ -14,6 +14,8 @@ def show_help(args):
         parser.print_help()
     elif args.method == 'get':
         parser.get_get_parser().print_help()
+    elif args.method == 'post':
+        parser.get_post_parser().print_help()
 
 
 if args.command == 'get':
