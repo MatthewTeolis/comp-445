@@ -1,10 +1,10 @@
-import argparse
+from argparse import ArgumentParser
 
 
 class ArgParser:
 
     def __init__(self):
-        self.parser = argparse.ArgumentParser(
+        self.parser = ArgumentParser(
             prog='httpc',
             usage='httpc command [arguments]',
             description='httpc is a curl-like application but supports HTTP protocol only.',
