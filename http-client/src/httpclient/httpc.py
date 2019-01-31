@@ -1,6 +1,6 @@
 import re
 
-from argparser.ArgParser import ArgParser
+from httpclient.argparser.ArgParser import ArgParser
 
 
 parser = ArgParser()

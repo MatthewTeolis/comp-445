@@ -1,7 +1,7 @@
 import re
 import socket
 
-from exceptions.PortOutOfRangeException import PortOutOfRangeException
+from httpclient.exceptions.PortOutOfRangeException import PortOutOfRangeException
 
 
 class HTTPClient:
