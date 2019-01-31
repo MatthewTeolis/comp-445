@@ -1,7 +1,6 @@
 import re
 import socket
 
-from contextlib import closing
 from exceptions.PortOutOfRangeException import PortOutOfRangeException
 
 
@@ -29,10 +28,10 @@ class HTTPClient:
 HTTP_VERSION = '1.0'
 
 
-def get(url):
-    (protocol, host, port, path) = parse_url(url)
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.sendall()
+# def get(url):
+#     (protocol, host, port, path) = parse_url(url)
+#     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+#         s.sendall()
 
 
 def parse_url(url):
