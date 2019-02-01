@@ -26,6 +26,20 @@ def fix_host_header(headers: list, host: str):
         headers.append(f'Host: {host}')
 
 
+def fix_content_length_header(headers: list, data: str):
+    content_length_string = f'Content-Length: {len(data)}'
+    pattern = r'^Content-Length:.*'
+    replaced = False
+
+    for i in range(len(headers)):
+        if re.match(pattern, headers[i]):
+            replaced = True
+            headers[i] = re.sub(pattern, content_length_string, headers[i])
+
+    if not replaced:
+        headers.append(content_length_string)
+
+
 def adjust_headers(headers: list, host: str):
     fix_host_header(headers, host)
     fix_connection_header(headers)
@@ -57,9 +71,17 @@ def parse_response(response: str):
     response_headers_array = response_array[header_line_index:body_separator]
     body = response_array[body_separator + 1]
 
-    print("status line", status_line)
-    print("headers", response_headers_array)
-    print("body ", body)
+    return status_line, response_headers_array, body
+
+
+def get_data(args):
+    if args.d is None:
+        file = open(args.f, 'r')
+        data = file.read()
+        file.close()
+        return data
+    else:
+        return args.d
 
 
 def get(args):
@@ -68,14 +90,50 @@ def get(args):
     headers = adjust_headers(args.h, host)
     full_request = f'{request}\r\n{headers}\r\n\r\n'
 
+    if args.v:
+        print('Request:')
+        print(('> ' + full_request).replace('\r\n', '\r\n> '))
+
     httpc = HTTPClient(host, port)
     httpc.connect()
     response = httpc.send(full_request)
     httpc.disconnect()
 
-    parse_response(response)
+    (status_line, response_headers, response_body) = parse_response(response)
 
-    # print(response)
+    if args.v:
+        print('Response:')
+        print('< ' + status_line)
+        print('< ' + '\r\n< '.join(response_headers) + '\r\n< ')
+
+    print(response_body)
+
+
+def post(args):
+    (protocol, host, port, path) = parse_url(args.URL)
+    request = adjust_request('POST', path, 'HTTP/1.0')
+    data = get_data(args)
+    fix_content_length_header(args.h, data)
+    headers = adjust_headers(args.h, host)
+    full_request = f'{request}\r\n{headers}\r\n\r\n{data}\r\n\r\n'
+
+    if args.v:
+        print('Request:')
+        print(('> ' + full_request).replace('\r\n', '\r\n> '))
+
+    httpc = HTTPClient(host, port)
+    httpc.connect()
+    response = httpc.send(full_request)
+    httpc.disconnect()
+
+    (status_line, response_headers, response_body) = parse_response(response)
+
+    if args.v:
+        print('Response:')
+        print('< ' + status_line)
+        print('< ' + '\r\n< '.join(response_headers) + '\r\n< ')
+
+    print(response_body)
 
 
 parser = ArgParser()
@@ -94,14 +152,9 @@ def show_help(args):
 if args.command == 'get':
     get(args)
 elif args.command == 'post':
-    print(args)
+    post(args)
 elif args.command == 'help':
     show_help(args)
 else:
     parser.print_help()
 
-
-# httpclient = HTTPClient(host, port)
-# httpclient.connect()
-# print(httpclient.get(path))
-# httpclient.disconnect()
