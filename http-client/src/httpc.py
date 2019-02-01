@@ -1,7 +1,7 @@
 import re
 
 from httpclient.argparser.ArgParser import ArgParser
-
+from httpclient.http.HttpClient import parse_url
 
 parser = ArgParser()
 args = parser.parse_args()
@@ -22,7 +22,7 @@ def adjust_headers(headers: list, host: str):
     host_found = False
 
     for header in headers:
-        headers_string += f'\r\n{header}'
+        headers_string += f'{header}'
         if is_host_header(header):
             host_found = True
 
@@ -32,13 +32,11 @@ def adjust_headers(headers: list, host: str):
     return headers_string
 
 
-
 def get(args):
     print(args)
-    # (protocol, host, port, path) = parse_url(args.url)
-    # headers = adjust_headers(args.h, host)
-    # print(headers)
-
+    (protocol, host, port, path) = parse_url(args.URL)
+    headers = adjust_headers(args.h, host)
+    print(headers)
 
 
 def show_help(args):
