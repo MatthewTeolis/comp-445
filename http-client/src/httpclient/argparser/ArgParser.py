@@ -25,7 +25,7 @@ class ArgParser:
         )
         self.get_parser.add_argument('URL', type=str)
         self.get_parser.add_argument('-v', action='store_true', help='Prints the detail of the response such as protocol, status, and headers.')
-        self.get_parser.add_argument('-h', type=str, action='append', metavar='key:value', help="Associates headers to HTTP Request with the format 'key:value'")
+        self.get_parser.add_argument('-h', type=str, default=[], action='append', metavar='key:value', help="Associates headers to HTTP Request with the format 'key:value'")
 
         # create the parser for the "post" command
         self.post_parser = subparsers.add_parser(
@@ -38,7 +38,7 @@ class ArgParser:
         )
         self.post_parser.add_argument('URL', type=str)
         self.post_parser.add_argument('-v', action='store_true', help='Prints the detail of the response such as protocol, status, and headers.')
-        self.post_parser.add_argument('-h', type=str, action='append', metavar='key:value', help="Associates headers to HTTP Request with the format 'key:value'")
+        self.post_parser.add_argument('-h', type=str, default=[], action='append', metavar='key:value', help="Associates headers to HTTP Request with the format 'key:value'")
         data_option = self.post_parser.add_mutually_exclusive_group()
         data_option.add_argument('-d', type=str, metavar='string', help='Associates an inline data to the body HTTP POST request.')
         data_option.add_argument('-f', type=str, metavar='file', help='Associates the content of a file to the body HTTP POST request.')
