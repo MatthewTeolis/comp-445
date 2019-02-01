@@ -14,24 +14,13 @@ class HTTPClient:
     def connect(self):
         self.socket.connect((self.host, self.port))
 
-    def get(self, url):
-        request = f"GET {url} HTTP/1.0"
-        headers = f"Host: {self.host}"
-        self.socket.sendall(bytes(f"{request}\r\n{headers}\r\n\r\n", 'utf-8'))
+    def send(self, message):
+        self.socket.sendall(bytes(message, 'utf-8'))
         return self.socket.recv(4096).decode('utf-8')
 
     def disconnect(self):
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
-
-
-HTTP_VERSION = '1.0'
-
-
-# def get(url):
-#     (protocol, host, port, path) = parse_url(url)
-#     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-#         s.sendall()
 
 
 def parse_url(url):
