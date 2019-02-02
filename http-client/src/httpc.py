@@ -1,8 +1,7 @@
 import re
 
 from httpclient.argparser.ArgParser import ArgParser
-from httpclient.http.HttpClient import parse_url
-from httpclient.http.HttpClient import HTTPClient
+from httpclient.http.HttpClient import is_redirect, parse_url, parse_response, parse_status_line, send_request
 
 
 def fix_connection_header(headers: list):
@@ -42,36 +41,12 @@ def fix_content_length_header(headers: list, data: str):
 
 def adjust_headers(headers: list, host: str):
     fix_host_header(headers, host)
-    fix_connection_header(headers)
 
     return '\r\n'.join(headers)
 
 
 def adjust_request(request_type: str, path: str, http_version_string: str):
     return f'{request_type.upper()} {path} {http_version_string}'
-
-
-def parse_status_line(line: str):
-    pattern = r'^(?P<http_version>.*?) (?P<http_code>\d{3}) (?P<http_status>.*?)$'
-    match = re.match(pattern, line)
-    http_version = match.group('http_version')
-    http_code = match.group('http_code')
-    http_status = match.group('http_status')
-
-    return http_version, http_code, http_status
-
-
-def parse_response(response: str):
-    response_array = response.split('\r\n')
-    status_line_index = 0
-    header_line_index = 1
-    body_separator = response_array.index('')
-
-    status_line = response_array[status_line_index]
-    response_headers_array = response_array[header_line_index:body_separator]
-    body = response_array[body_separator + 1]
-
-    return status_line, response_headers_array, body
 
 
 def get_data(args):
@@ -103,10 +78,7 @@ def get(args):
         print('Request:')
         print(('> ' + full_request).replace('\r\n', '\r\n> '))
 
-    httpc = HTTPClient(host, port)
-    httpc.connect()
-    response = httpc.send(full_request)
-    httpc.disconnect()
+    response = send_request(host, port, full_request)
 
     (status_line, response_headers, response_body) = parse_response(response)
 
@@ -130,12 +102,11 @@ def post(args):
         print('Request:')
         print(('> ' + full_request).replace('\r\n', '\r\n> '))
 
-    httpc = HTTPClient(host, port)
-    httpc.connect()
-    response = httpc.send(full_request)
-    httpc.disconnect()
+    response = send_request(host, port, full_request)
 
     (status_line, response_headers, response_body) = parse_response(response)
+
+    (_, response_code, _) = parse_status_line(status_line)
 
     if args.v:
         print('Response:')
@@ -145,11 +116,7 @@ def post(args):
     print_or_write(response_body, args)
 
 
-parser = ArgParser()
-args = parser.parse_args()
-
-
-def show_help(args):
+def show_help(args, parser):
     if args.method == 'get':
         parser.get_get_parser().print_help()
     elif args.method == 'post':
@@ -158,12 +125,16 @@ def show_help(args):
         parser.print_help()
 
 
-if args.command == 'get':
-    get(args)
-elif args.command == 'post':
-    post(args)
-elif args.command == 'help':
-    show_help(args)
-else:
-    parser.print_help()
+if __name__ == '__main__':
+    parser = ArgParser()
+    args = parser.parse_args()
+
+    if args.command == 'get':
+        get(args)
+    elif args.command == 'post':
+        post(args)
+    elif args.command == 'help':
+        show_help(args, parser)
+    else:
+        parser.print_help()
 
