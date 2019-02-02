@@ -76,12 +76,21 @@ def parse_response(response: str):
 
 def get_data(args):
     if args.d is None:
-        file = open(args.f, 'r')
-        data = file.read()
-        file.close()
+        with open(args.f, 'r') as file:
+            data = file.read()
         return data
     else:
         return args.d
+
+
+def print_or_write(body, args):
+    if args.o is None:
+        print(body)
+    else:
+        with open(args.o, 'w') as file:
+            file.write(body)
+        if args.v:
+            print(f"** Wrote {len(body)} bytes of data to '{args.o}'")
 
 
 def get(args):
@@ -106,7 +115,7 @@ def get(args):
         print('< ' + status_line)
         print('< ' + '\r\n< '.join(response_headers) + '\r\n< ')
 
-    print(response_body)
+    print_or_write(response_body, args)
 
 
 def post(args):
@@ -133,7 +142,7 @@ def post(args):
         print('< ' + status_line)
         print('< ' + '\r\n< '.join(response_headers) + '\r\n< ')
 
-    print(response_body)
+    print_or_write(response_body, args)
 
 
 parser = ArgParser()
@@ -141,12 +150,12 @@ args = parser.parse_args()
 
 
 def show_help(args):
-    if args.method is None:
-        parser.print_help()
-    elif args.method == 'get':
+    if args.method == 'get':
         parser.get_get_parser().print_help()
     elif args.method == 'post':
         parser.get_post_parser().print_help()
+    else:
+        parser.print_help()
 
 
 if args.command == 'get':
