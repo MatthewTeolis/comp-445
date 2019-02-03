@@ -1,3 +1,5 @@
+#!/bin/python
+
 from httpclient.argparser.ArgParser import ArgParser
 from httpclient.http.HttpClient import is_redirect, send_request
 from httpclient.http.HttpRequest import HttpRequest
