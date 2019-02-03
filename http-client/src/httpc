@@ -54,18 +54,18 @@ def perform_request(request: HttpRequest, verbose):
 
 
 def get(request: HttpRequest, verbose):
-    return perform_request(request, verbose)
+    return handle_redirects(request, verbose)
 
 
 def post(request: HttpRequest, verbose):
     request.headers['Content-Length'] = len(request.data)
 
-    return perform_request(request, verbose)
+    return handle_redirects(request, verbose)
 
 
-def handle_redirects(request: HttpRequest):
+def handle_redirects(request: HttpRequest, verbose):
     while True:
-        response = get(request, args.v)
+        response = perform_request(request, verbose)
 
         if is_redirect(response.code):
             location = response.headers.get('Location')
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
         request = HttpRequest(host, port, 'GET', path, convert_list_headers_to_dictionary(args.h))
 
-        response = handle_redirects(request)
+        response = get(request, args.v)
 
         print_or_write(response.body, args)
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
         request = HttpRequest(host, port, 'POST', path, convert_list_headers_to_dictionary(args.h), data)
 
-        response = handle_redirects(request)
+        response = post(request, args.v)
 
         print_or_write(response.body, args)
 
