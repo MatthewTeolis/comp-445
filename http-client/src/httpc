@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python
 
 from httpclient.argparser.ArgParser import ArgParser
 from httpclient.http.HttpClient import is_redirect, send_request
