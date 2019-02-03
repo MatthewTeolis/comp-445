@@ -1,52 +1,9 @@
-import re
-
 from httpclient.argparser.ArgParser import ArgParser
-from httpclient.http.HttpClient import is_redirect, parse_url, parse_response, parse_status_line, send_request
-
-
-def fix_connection_header(headers: list):
-    connection_close_string = 'Connection: close'
-    pattern = r'^Connection:.*'
-    replaced = False
-
-    for i in range(len(headers)):
-        if re.match(pattern, headers[i]):
-            replaced = True
-            headers[i] = re.sub(pattern, connection_close_string, headers[i])
-
-    if not replaced:
-        headers.append(connection_close_string)
-
-
-def fix_host_header(headers: list, host: str):
-    # if it does not have the Host string in the headers
-    if not any(re.match('^Host:.*', header) is not None for header in headers):
-        # append the default host value
-        headers.append(f'Host: {host}')
-
-
-def fix_content_length_header(headers: list, data: str):
-    content_length_string = f'Content-Length: {len(data)}'
-    pattern = r'^Content-Length:.*'
-    replaced = False
-
-    for i in range(len(headers)):
-        if re.match(pattern, headers[i]):
-            replaced = True
-            headers[i] = re.sub(pattern, content_length_string, headers[i])
-
-    if not replaced:
-        headers.append(content_length_string)
-
-
-def adjust_headers(headers: list, host: str):
-    fix_host_header(headers, host)
-
-    return '\r\n'.join(headers)
-
-
-def adjust_request(request_type: str, path: str, http_version_string: str):
-    return f'{request_type.upper()} {path} {http_version_string}'
+from httpclient.http.HttpClient import is_redirect, send_request
+from httpclient.http.HttpRequest import HttpRequest
+from httpclient.http.HttpResponse import HttpResponse
+from httpclient.util.converter import convert_list_headers_to_dictionary
+from httpclient.util.parser import parse_url, parse_response
 
 
 def get_data(args):
@@ -68,52 +25,57 @@ def print_or_write(body, args):
             print(f"** Wrote {len(body)} bytes of data to '{args.o}'")
 
 
-def get(args):
-    (protocol, host, port, path) = parse_url(args.URL)
-    request = adjust_request('GET', path, 'HTTP/1.0')
-    headers = adjust_headers(args.h, host)
-    full_request = f'{request}\r\n{headers}\r\n\r\n'
-
-    if args.v:
-        print('Request:')
-        print(('> ' + full_request).replace('\r\n', '\r\n> '))
-
-    response = send_request(host, port, full_request)
-
-    (status_line, response_headers, response_body) = parse_response(response)
-
-    if args.v:
-        print('Response:')
-        print('< ' + status_line)
-        print('< ' + '\r\n< '.join(response_headers) + '\r\n< ')
-
-    print_or_write(response_body, args)
+def log_request(request: HttpRequest):
+    print('Request:')
+    print(('> ' + str(request)).replace('\r\n', '\r\n> '))
 
 
-def post(args):
-    (protocol, host, port, path) = parse_url(args.URL)
-    request = adjust_request('POST', path, 'HTTP/1.0')
-    data = get_data(args)
-    fix_content_length_header(args.h, data)
-    headers = adjust_headers(args.h, host)
-    full_request = f'{request}\r\n{headers}\r\n\r\n{data}\r\n\r\n'
+def log_response(response: HttpResponse):
+    print('Response:')
+    print('< ' + response.get_status_line())
+    print('< ' + response.stringify_headers().replace('\r\n', '\r\n< ') + '\r\n< ')
 
-    if args.v:
-        print('Request:')
-        print(('> ' + full_request).replace('\r\n', '\r\n> '))
 
-    response = send_request(host, port, full_request)
+def perform_request(request: HttpRequest, verbose):
+    request.headers['Host'] = request.host
 
-    (status_line, response_headers, response_body) = parse_response(response)
+    if verbose:
+        log_request(request)
 
-    (_, response_code, _) = parse_status_line(status_line)
+    response_string = send_request(request.host, request.port, str(request))
+    response = parse_response(response_string)
 
-    if args.v:
-        print('Response:')
-        print('< ' + status_line)
-        print('< ' + '\r\n< '.join(response_headers) + '\r\n< ')
+    if verbose:
+        log_response(response)
 
-    print_or_write(response_body, args)
+    return response
+
+
+def get(request: HttpRequest, verbose):
+    return perform_request(request, verbose)
+
+
+def post(request: HttpRequest, verbose):
+    request.headers['Content-Length'] = len(request.data)
+
+    return perform_request(request, verbose)
+
+
+def handle_redirects(request: HttpRequest):
+    while True:
+        response = get(request, args.v)
+
+        if is_redirect(response.code):
+            location = response.headers.get('Location')
+            (_, redirect_host, redirect_port, redirect_path) = parse_url(location)
+            if redirect_host != '':
+                request.host = redirect_host
+            request.port = redirect_port
+            request.path = redirect_path
+        else:
+            break
+
+    return response
 
 
 def show_help(args, parser):
@@ -130,11 +92,26 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.command == 'get':
-        get(args)
+        (_, host, port, path) = parse_url(args.URL)
+
+        request = HttpRequest(host, port, 'GET', path, convert_list_headers_to_dictionary(args.h))
+
+        response = handle_redirects(request)
+
+        print_or_write(response.body, args)
+
     elif args.command == 'post':
-        post(args)
+        (_, host, port, path) = parse_url(args.URL)
+        data = get_data(args)
+
+        request = HttpRequest(host, port, 'POST', path, convert_list_headers_to_dictionary(args.h), data)
+
+        response = handle_redirects(request)
+
+        print_or_write(response.body, args)
+
     elif args.command == 'help':
         show_help(args, parser)
+
     else:
         parser.print_help()
-
