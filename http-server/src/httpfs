@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+from httpserver.argparser.ArgParser import ArgParser
+from httpserver.http.HttpServer import HttpServer
+from httpserver.util.parser import parse_request
+
+if __name__ == '__main__':
+    parser = ArgParser()
+    args = parser.parse_args()
+    print(args)
+
+    port = args.port
+    http_server = HttpServer(port)
+    print(f'Listening on port {port}')
+    http_server.listen()
+    client, address = http_server.accept()
+    print('Connected', address)
+    data = client.recv(1024).decode('utf-8')
+    request = parse_request(data)
+
+    client.close()
+
+    http_server.kill()
+
+    # if args.command == 'get':
+    #     (_, host, port, path) = parse_url(args.URL)
+    #
+    #     request = HttpRequest(host, port, 'GET', path, convert_list_headers_to_dictionary(args.h))
+    #
+    #     response = get(request, args.v)
+    #
+    #     print_or_write(response.body, args)
+    #
+    # elif args.command == 'post':
+    #     (_, host, port, path) = parse_url(args.URL)
+    #     data = get_data(args)
+    #
+    #     request = HttpRequest(host, port, 'POST', path, convert_list_headers_to_dictionary(args.h), data)
+    #
+    #     response = post(request, args.v)
+    #
+    #     print_or_write(response.body, args)
+    #
+    # elif args.command == 'help':
+    #     show_help(args, parser)
+    #
+    # else:
+    #     parser.print_help()
