@@ -27,5 +27,4 @@ class HttpServer:
         return self.socket.accept()
 
     def kill(self):
-        # self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()

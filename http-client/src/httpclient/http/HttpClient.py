@@ -27,7 +27,6 @@ class HTTPClient:
         return ''.join(total_data)
 
     def disconnect(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
 
