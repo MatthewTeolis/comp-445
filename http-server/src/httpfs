@@ -12,7 +12,7 @@ from httpserver.io.File import File
 from httpserver.util.parser import parse_request
 
 
-def get_directory_contents(path):
+def get_directory_contents(path, html=False):
     """
     Get a generator containing a directory's contents.
     :param path: absolute path of directory the contents of which we want to view
@@ -30,10 +30,12 @@ def get_directory_contents(path):
             files.append(file_path)
 
     for file in files:
-        yield File(file).__repr__()
+        f = File(file)
+        yield f.__repr__() if not html else f.get_html()
 
     for directory in directories:
-        yield Directory(directory, list(get_directory_contents(directory))).__repr__()
+        d = Directory(directory, list(get_directory_contents(directory, html)))
+        yield d.__repr__() if not html else d.get_html()
 
 
 def get_file_contents(path):
@@ -55,11 +57,15 @@ def get_xml_representation(path):
     return dicttoxml(list(get_directory_contents(path)), custom_root="structure", attr_type=False).decode("utf-8")
 
 
-# todo html and plain text
+def get_html_representation(path):
+    return ''.join(list(get_directory_contents(path, True)))
+
+
+# todo plain text
 content_types = {
     "application/json": get_json_representation,
     "application/xml": get_xml_representation,
-    "text/html": "text/html",
+    "text/html": get_html_representation,
     "text/plain": "text/plain"
 }
 

@@ -19,6 +19,6 @@ class Directory:
         return f"<li>" \
             f"{os.path.basename(self.path)}" \
             f"<ul>" \
-            f"{''.join(['<li>' + child.path + '</li>' for child in self.children])}" \
+            f"{''.join([child for child in self.children])}" \
             f"</ul>" \
             f"</li>"
