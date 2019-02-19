@@ -12,11 +12,11 @@ from httpserver.io.File import File
 from httpserver.util.parser import parse_request
 
 
-def get_directory_contents(path, html=False):
+def get_directory_contents(path):
     """
     Get a generator containing a directory's contents.
     :param path: absolute path of directory the contents of which we want to view
-    :return: generator containing list of files first and then directories (in that order), in the directory
+    :return: generator containing files first and then directories (in that order), in the directory
     """
     files, directories = [], []
 
@@ -30,12 +30,10 @@ def get_directory_contents(path, html=False):
             files.append(file_path)
 
     for file in files:
-        f = File(file)
-        yield f.__repr__() if not html else f.get_html()
+        yield File(file)
 
     for directory in directories:
-        d = Directory(directory, list(get_directory_contents(directory, html)))
-        yield d.__repr__() if not html else d.get_html()
+        yield Directory(directory, get_directory_contents(directory))
 
 
 def get_file_contents(path):
@@ -50,15 +48,15 @@ def get_file_contents(path):
 
 
 def get_json_representation(path):
-    return json.dumps(list(get_directory_contents(path)))
+    return json.dumps([x.__repr__() for x in get_directory_contents(path)])
 
 
 def get_xml_representation(path):
-    return dicttoxml(list(get_directory_contents(path)), custom_root="structure", attr_type=False).decode("utf-8")
+    return dicttoxml([x.__repr__() for x in get_directory_contents(path)], custom_root="structure", attr_type=False).decode("utf-8")
 
 
 def get_html_representation(path):
-    return ''.join(list(get_directory_contents(path, True)))
+    return ''.join([x.get_html() for x in get_directory_contents(path)])
 
 
 # todo plain text
@@ -87,8 +85,14 @@ if __name__ == '__main__':
 
     if request.verb == 'GET' and request.path == '/':
 
-        content = content_types[content_type](args.directory)
-        response = HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+        try:
+            content = content_types[content_type](args.directory)
+            response = HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+        except FileNotFoundError as e:
+            response = HttpResponse("HTTP/1.0", 404, "Not Found", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
+        except NotADirectoryError as e:
+            response = HttpResponse("HTTP/1.0", 400, "Bad Request", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
+
         client.sendall(bytes(response, "utf-8"))
 
     elif request.verb == 'GET' and request.path != '/':
