@@ -12,3 +12,6 @@ class File:
             file=os.path.basename(self.path),
             isDir=False
         )
+
+    def get_html(self):
+        return f"<li>{os.path.basename(self.path)}</li>"

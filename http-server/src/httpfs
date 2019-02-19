@@ -77,7 +77,7 @@ if __name__ == '__main__':
     print('Connected', address)
     data = client.recv(1024).decode('utf-8')
     request = parse_request(data)
-    content_type = request.headers["Content-Type"] if "Content-Type" in request.headers else "application/xml"
+    content_type = request.headers["Content-Type"] if "Content-Type" in request.headers else "application/json"
 
     if request.verb == 'GET' and request.path == '/':
 

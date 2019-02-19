@@ -14,3 +14,11 @@ class Directory:
             isDir=True,
             children=self.children
         )
+
+    def get_html(self):
+        return f"<li>" \
+            f"{os.path.basename(self.path)}" \
+            f"<ul>" \
+            f"{''.join(['<li>' + child.path + '</li>' for child in self.children])}" \
+            f"</ul>" \
+            f"</li>"
