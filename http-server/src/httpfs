@@ -2,6 +2,8 @@
 import json
 import os
 
+from dicttoxml import dicttoxml
+
 from httpserver.argparser.ArgParser import ArgParser
 from httpserver.http.HttpResponse import HttpResponse
 from httpserver.http.HttpServer import HttpServer
@@ -45,6 +47,23 @@ def get_file_contents(path):
         return "Where do you think you're going?"
 
 
+def get_json_representation(path):
+    return json.dumps(list(get_directory_contents(path)))
+
+
+def get_xml_representation(path):
+    return dicttoxml(list(get_directory_contents(path)), custom_root="structure", attr_type=False).decode("utf-8")
+
+
+# todo html and plain text
+content_types = {
+    "application/json": get_json_representation,
+    "application/xml": get_xml_representation,
+    "text/html": "text/html",
+    "text/plain": "text/plain"
+}
+
+
 if __name__ == '__main__':
     parser = ArgParser()
     args = parser.parse_args()
@@ -58,16 +77,19 @@ if __name__ == '__main__':
     print('Connected', address)
     data = client.recv(1024).decode('utf-8')
     request = parse_request(data)
+    content_type = request.headers["Content-Type"] if "Content-Type" in request.headers else "application/xml"
 
     if request.verb == 'GET' and request.path == '/':
 
-        content = json.dumps(list(get_directory_contents(args.directory)))
-        client.sendall(bytes(HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": "application/json"}, content).__repr__(), "utf-8"))
+        content = content_types[content_type](args.directory)
+        response = HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+        client.sendall(bytes(response, "utf-8"))
 
     elif request.verb == 'GET' and request.path != '/':
 
         content = get_file_contents(os.path.join(args.directory, request.path[1:]))
-        client.sendall(bytes(HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content)}, content).__repr__(), "utf-8"))
+        response = HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
+        client.sendall(bytes(response, "utf-8"))
 
     client.close()
 
