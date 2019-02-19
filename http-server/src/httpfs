@@ -38,13 +38,13 @@ def get_directory_contents(path):
 
 def get_file_contents(path):
     try:
-        return open(path).read()
+        return open(path).read(), 200, "OK"
     except FileNotFoundError:
-        return "File not found."
+        return "File not found.", 404, "Not Found"
     except IsADirectoryError:
-        return "You cannot read a directory's contents. Well, technically you can. But I won't allow it."
+        return "You cannot read a directory's contents. Well, technically you can. But I won't allow it.", 400, "Bad Request"
     except NotADirectoryError:
-        return "Where do you think you're going?"
+        return "Where do you think you're going?", 400, "Bad Request"
 
 
 def get_json_representation(path):
@@ -87,8 +87,8 @@ if __name__ == '__main__':
 
     elif request.verb == 'GET' and request.path != '/':
 
-        content = get_file_contents(os.path.join(args.directory, request.path[1:]))
-        response = HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
+        content, code, status = get_file_contents(os.path.join(args.directory, request.path[1:]))
+        response = HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
         client.sendall(bytes(response, "utf-8"))
 
     client.close()
