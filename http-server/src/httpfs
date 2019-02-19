@@ -1,8 +1,63 @@
 #!/usr/bin/env python3
+import json
+import os
+from collections import OrderedDict
 
 from httpserver.argparser.ArgParser import ArgParser
+from httpserver.http.HttpResponse import HttpResponse
 from httpserver.http.HttpServer import HttpServer
 from httpserver.util.parser import parse_request
+
+
+def get_directory_contents(path):
+    """
+    Get a generator containing a directory's contents.
+    :param path: absolute path of directory the contents of which we want to view
+    :return: generator containing list of files first and then directories (in that order), in the directory
+    """
+    files, directories = [], []
+
+    for file in os.listdir(path):
+
+        file_path = os.path.join(path, file)
+
+        if os.path.isdir(file_path):
+            directories.append(file_path)
+        else:
+            files.append(file_path)
+
+    for file in files:
+        yield get_file_object(file)
+
+    for directory in directories:
+        yield get_directory_object(directory)
+
+
+def get_file_object(path):
+    return OrderedDict(
+        file=os.path.basename(path),
+        isDir=False
+    )
+
+
+def get_directory_object(path):
+    return OrderedDict(
+        file=os.path.basename(path),
+        isDir=True,
+        children=list(get_directory_contents(path))
+    )
+
+
+def get_file_content(path):
+    try:
+        return open(path).read()
+    except FileNotFoundError:
+        return "File not found."
+    except IsADirectoryError:
+        return "You cannot read a directory's contents. Well, technically you can. But I won't allow it."
+    except NotADirectoryError:
+        return "Where do you think you're going?"
+
 
 if __name__ == '__main__':
     parser = ArgParser()
@@ -17,6 +72,16 @@ if __name__ == '__main__':
     print('Connected', address)
     data = client.recv(1024).decode('utf-8')
     request = parse_request(data)
+
+    if request.verb == 'GET' and request.path == '/':
+
+        content = json.dumps(list(get_directory_contents(args.directory)))
+        client.sendall(bytes(HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": "application/json"}, content).__repr__(), "utf-8"))
+
+    elif request.verb == 'GET' and request.path != '/':
+
+        content = get_file_content(os.path.join(args.directory, request.path[1:]))
+        client.sendall(bytes(HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content)}, content).__repr__(), "utf-8"))
 
     client.close()
 
