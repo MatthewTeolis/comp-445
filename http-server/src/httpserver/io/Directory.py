@@ -1,13 +1,16 @@
 import os
+from collections import OrderedDict
 
 
-def get_iterator_all_files_name(path):
-    for (dir_path, dir_names, filenames) in os.walk(path):
-        for filename in filenames:
-            yield os.path.join(dir_path, filename)
+class Directory:
 
+    def __init__(self, path: str, children: list):
+        self.path = path
+        self.children = children
 
-if __name__ == '__main__':
-    for file in get_iterator_all_files_name('..'):
-        print(file)
-
+    def __repr__(self):
+        return OrderedDict(
+            file=os.path.basename(self.path),
+            isDir=True,
+            children=self.children
+        )
