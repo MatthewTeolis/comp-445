@@ -37,14 +37,7 @@ def get_directory_contents(path):
 
 
 def get_file_contents(path):
-    try:
-        return open(path).read(), 200, "OK"
-    except FileNotFoundError:
-        return "File not found.", 404, "Not Found"
-    except IsADirectoryError:
-        return "You cannot read a directory's contents. Well, technically you can. But I won't allow it.", 400, "Bad Request"
-    except NotADirectoryError:
-        return "Where do you think you're going?", 400, "Bad Request"
+    return File(path).get_contents()
 
 
 def get_json_representation(path):
