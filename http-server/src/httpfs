@@ -5,6 +5,7 @@ import os
 from dicttoxml import dicttoxml
 
 from httpserver.argparser.ArgParser import ArgParser
+from httpserver.http.HttpRequest import HttpRequest
 from httpserver.http.HttpResponse import HttpResponse
 from httpserver.http.HttpServer import HttpServer
 from httpserver.io.Directory import Directory
@@ -36,10 +37,6 @@ def get_directory_contents(path):
         yield Directory(directory, get_directory_contents(directory))
 
 
-def get_file_contents(path):
-    return File(path).get_contents()
-
-
 def get_json_representation(path):
     return json.dumps([x.__repr__() for x in get_directory_contents(path)])
 
@@ -61,6 +58,32 @@ content_types = {
 }
 
 
+def list_directory(path: str, content_type: str):
+    try:
+        content = content_types[content_type](path)
+        return HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+    except FileNotFoundError as e:
+        return HttpResponse("HTTP/1.0", 404, "Not Found", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
+    except NotADirectoryError as e:
+        return HttpResponse("HTTP/1.0", 400, "Bad Request", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
+    except KeyError:
+        content = "Cannot figure out how you want to see the data."
+        return HttpResponse("HTTP/1.0", 400, "Bad Request", {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
+
+
+def get_file_contents(path):
+    content, code, status = File(path).get_contents()
+    return HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
+
+
+def get(path, request: HttpRequest):
+    if request.path == '/':
+        content_type = request.headers["Content-Type"] if "Content-Type" in request.headers else "application/json"
+        return list_directory(path, content_type)
+    else:
+        return get_file_contents(os.path.join(path, request.path[1:]))
+
+
 if __name__ == '__main__':
     parser = ArgParser()
     args = parser.parse_args()
@@ -74,39 +97,17 @@ if __name__ == '__main__':
     print('Connected', address)
     data = client.recv(1024).decode('utf-8')
     request = parse_request(data)
-    content_type = request.headers["Content-Type"] if "Content-Type" in request.headers else "application/json"
 
-    if request.verb == 'GET' and request.path == '/':
-
-        try:
-            content = content_types[content_type](args.directory)
-            response = HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
-        except FileNotFoundError as e:
-            response = HttpResponse("HTTP/1.0", 404, "Not Found", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
-        except NotADirectoryError as e:
-            response = HttpResponse("HTTP/1.0", 400, "Bad Request", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
-
+    if request.verb == 'GET':
+        response = get(args.directory, request)
         client.sendall(bytes(response, "utf-8"))
-
-    elif request.verb == 'GET' and request.path != '/':
-
-        content, code, status = get_file_contents(os.path.join(args.directory, request.path[1:]))
-        response = HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
-        client.sendall(bytes(response, "utf-8"))
+    elif request.verb == 'POST':
+        pass
 
     client.close()
 
     http_server.kill()
 
-    # if args.command == 'get':
-    #     (_, host, port, path) = parse_url(args.URL)
-    #
-    #     request = HttpRequest(host, port, 'GET', path, convert_list_headers_to_dictionary(args.h))
-    #
-    #     response = get(request, args.v)
-    #
-    #     print_or_write(response.body, args)
-    #
     # elif args.command == 'post':
     #     (_, host, port, path) = parse_url(args.URL)
     #     data = get_data(args)
