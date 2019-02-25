@@ -58,22 +58,26 @@ content_types = {
 }
 
 
+def response(code, status, content, content_type):
+    return HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+
+
 def list_directory(path: str, content_type: str):
     try:
         content = content_types[content_type](path)
-        return HttpResponse("HTTP/1.0", 200, "OK", {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+        return response(200, "OK", content, content_type)
     except FileNotFoundError as e:
-        return HttpResponse("HTTP/1.0", 404, "Not Found", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
+        return response(404, "Not Found", str(e), "text/plain")
     except NotADirectoryError as e:
-        return HttpResponse("HTTP/1.0", 400, "Bad Request", {"Content-Length": len(str(e)), "Content-Type": "text/plain"}, str(e)).__repr__()
+        return response(400, "Bad Request", str(e), "text/plain")
     except KeyError:
         content = "Cannot figure out how you want to see the data."
-        return HttpResponse("HTTP/1.0", 400, "Bad Request", {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
+        return response(400, "Bad Request", content, "text/plain")
 
 
 def get_file_contents(path):
     content, code, status = File(path).get_contents()
-    return HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": "text/plain"}, content).__repr__()
+    return response(code, status, content, "text/plain")
 
 
 def get(path, request: HttpRequest):

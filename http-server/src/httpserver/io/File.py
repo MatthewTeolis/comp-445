@@ -18,7 +18,8 @@ class File:
 
     def get_contents(self):
         try:
-            return open(self.path).read(), 200, "OK"
+            with open(self.path) as file:
+                return file.read(), 200, "OK"
         except FileNotFoundError:
             return "File not found.", 404, "Not Found"
         except IsADirectoryError:
