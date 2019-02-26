@@ -16,6 +16,9 @@ class File:
     def get_html(self):
         return f"<li>{os.path.basename(self.path)}</li>"
 
+    def get_plain_text(self):
+        return f"{os.path.basename(self.path)}\n"
+
     def get_contents(self):
         try:
             with open(self.path) as file:

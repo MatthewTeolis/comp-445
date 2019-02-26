@@ -6,7 +6,7 @@ class HttpRequest:
     def __init__(self, verb: str, path: str, version: str, headers: dict, content: str):
         self.verb = verb
 
-        path = re.sub(r'\.\.', '', path)
+        path = path.replace('..', '')
         path = re.sub(r'/+', '/', path)
         self.path = path
 
