@@ -64,7 +64,7 @@ content_types = {
 }
 
 
-def response(code, status, content, content_type):
+def response(code, status, content, content_type="text/plain"):
     return HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
 
 
@@ -94,6 +94,12 @@ def get(path, request: HttpRequest):
         return get_file_contents(os.path.join(path, request.path[1:]))
 
 
+def post(path, request: HttpRequest):
+    path = os.path.join(path, request.path[1:])
+    content, code, status = File(path).write(request.content)
+    return response(code, status, content, "text/plain")
+
+
 def listen_to_client(client, address):
     print('Connected', address)
     data = client.recv(1024).decode('utf-8')
@@ -103,7 +109,8 @@ def listen_to_client(client, address):
         response = get(args.directory, request)
         client.sendall(bytes(response, "utf-8"))
     elif request.verb == 'POST':
-        pass
+        response = post(args.directory, request)
+        client.sendall(bytes(response, "utf-8"))
 
     client.close()
 
