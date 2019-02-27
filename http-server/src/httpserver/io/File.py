@@ -24,11 +24,11 @@ class File:
             with open(self.path) as file:
                 return file.read(), 200, "OK"
         except FileNotFoundError:
-            return "File not found.", 404, "Not Found"
+            return f"File {self.path} not found.", 404, "Not Found"
         except IsADirectoryError:
-            return "You cannot read a directory's contents. Well, technically you can. But I won't allow it.", 400, "Bad Request"
+            return f"{self.path} is a directory. You cannot read a directory's contents.", 400, "Bad Request"
         except NotADirectoryError:
-            return "Where do you think you're going?", 400, "Bad Request"
+            return f"{self.path} is not a directory.", 400, "Bad Request"
 
     def write(self, content):
         try:
@@ -37,4 +37,4 @@ class File:
                 file.write(content)
                 return f"Successfully {message} {os.path.basename(self.path)}. You can find it at {self.path}", 200, "OK"
         except IsADirectoryError:
-            return "You cannot overwrite a directory's content.", 400, "Bad Request"
+            return f"{self.path} is a directory. You cannot overwrite a directory's content.", 400, "Bad Request"
