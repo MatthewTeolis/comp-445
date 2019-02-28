@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import json
 import os
 
@@ -53,12 +54,12 @@ def get_plain_text_representation(path):
     return ''.join([x.get_plain_text() for x in get_directory_contents(path)])
 
 
-# todo plain text
 content_types = {
     "application/json": get_json_representation,
     "application/xml": get_xml_representation,
     "text/html": get_html_representation,
-    "text/plain": get_plain_text_representation
+    "text/plain": get_plain_text_representation,
+    "*/*": get_json_representation
 }
 
 
