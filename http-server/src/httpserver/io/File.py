@@ -30,8 +30,10 @@ class File:
         except NotADirectoryError:
             return f"{self.path} is not a directory.", 400, "Bad Request"
 
-    def write(self, content):
+    def write(self, content, overwrite):
         try:
+            if os.path.isfile(self.path) and not overwrite:
+                return f"File {self.path} already exists and we don't want to overwrite it.", 400, "Bad Request"
             message = "overwrote" if os.path.exists(self.path) else "created and wrote to"
             with open(self.path, 'w') as file:
                 file.write(content)

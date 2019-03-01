@@ -110,7 +110,7 @@ def get(args, request: HttpRequest):
 
 def post(args, request: HttpRequest):
     path = os.path.join(args.directory, request.path[1:])
-    content, code, status = File(path).write(request.content)
+    content, code, status = File(path).write(request.content, args.overwrite)
     if args.verbose:
         print(f"{code} {status}: {content}")
     return response(code, status, content, "text/plain")
