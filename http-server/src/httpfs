@@ -2,6 +2,7 @@
 
 import json
 import os
+import threading
 
 from dicttoxml import dicttoxml
 
@@ -93,16 +94,7 @@ def get(path, request: HttpRequest):
         return get_file_contents(os.path.join(path, request.path[1:]))
 
 
-if __name__ == '__main__':
-    parser = ArgParser()
-    args = parser.parse_args()
-    print(args)
-
-    port = args.port
-    http_server = HttpServer(port)
-    print(f'Listening on port {port}')
-    http_server.listen()
-    client, address = http_server.accept()
+def listen_to_client(client, address):
     print('Connected', address)
     data = client.recv(1024).decode('utf-8')
     request = parse_request(data)
@@ -115,7 +107,26 @@ if __name__ == '__main__':
 
     client.close()
 
-    http_server.kill()
+
+if __name__ == '__main__':
+    parser = ArgParser()
+    args = parser.parse_args()
+    print(args)
+
+    port = args.port
+    http_server = HttpServer(port)
+
+    try:
+        print(f'Listening on port {port}')
+        http_server.listen()
+
+        while True:
+            client, address = http_server.accept()
+            threading.Thread(target=listen_to_client, args=(client, address)).start()
+    except KeyboardInterrupt:
+        http_server.kill()
+        print('\nTerminated')
+
 
     # elif args.command == 'post':
     #     (_, host, port, path) = parse_url(args.URL)
