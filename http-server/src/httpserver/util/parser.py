@@ -1,15 +1,32 @@
 import re
 
 
+def parse_qparams(qparams_list: list):
+    qparam_dict = {}
+
+    for qparam in qparams_list:
+        qp = qparam.split("=")
+
+        if len(qp) == 1:
+            qparam_dict[qp[0]] = True
+        else:
+            qparam_dict[qp[0]] = qp[1]
+
+    return qparam_dict
+
+
 def parse_request_line(request: str):
     pattern = r'(?P<verb>.*?) (?P<path>.*?) (?P<version>.*)'
     match = re.match(pattern, request)
 
     verb = match.group('verb')
-    path = match.group('path')
+    raw_path = match.group('path')
+    raw_path_split = raw_path.split("?")
+    path = raw_path_split[0]
+    qparams = parse_qparams(raw_path_split[1].split("&")) if len(raw_path_split) > 1 else dict()
     version = match.group('version')
 
-    return verb, path, version
+    return verb, path, version, qparams
 
 
 def parse_request(request: str):
@@ -23,7 +40,7 @@ def parse_request(request: str):
     body_separator = request_array.index('')
 
     request_line = request_array[request_line_index]
-    verb, path, version = parse_request_line(request_line)
+    verb, path, version, qparams = parse_request_line(request_line)
 
     headers_list = request_array[header_line_index:body_separator]
     headers = convert_list_headers_to_dictionary(headers_list)
@@ -31,7 +48,7 @@ def parse_request(request: str):
     content_array = request_array[body_separator + 1:]
     content = '\r\n'.join(content_array)
 
-    return HttpRequest(verb, path, version, headers, content)
+    return HttpRequest(verb, path, version, qparams, headers, content)
 
 
 def parse_header(header: str):
