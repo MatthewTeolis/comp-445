@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentParser
 
 
@@ -35,7 +36,7 @@ class ArgParser:
             '-d',
             metavar='',
             type=str,
-            default='.',
+            default=os.getcwd(),
             help='Specifies the directory that the server will use to read/write requested files. '
                  'Default is the current directory when launching the application.',
             dest='directory'

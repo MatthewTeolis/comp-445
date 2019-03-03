@@ -3,7 +3,7 @@ import re
 
 class HttpRequest:
 
-    def __init__(self, verb: str, path: str, version: str, headers: dict, content: str):
+    def __init__(self, verb: str, path: str, version: str, qparams: dict, headers: dict, content: str):
         self.verb = verb
 
         path = path.replace('..', '')
@@ -11,6 +11,7 @@ class HttpRequest:
         self.path = path
 
         self.version = version
+        self.qparams = qparams
         self.headers = headers
         self.content = content
 

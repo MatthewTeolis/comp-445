@@ -1,15 +1,32 @@
 import re
 
 
+def parse_qparams(qparams_list: list):
+    qparam_dict = {}
+
+    for qparam in qparams_list:
+        qp = qparam.split('=', 1)
+
+        if len(qp) == 1:
+            qparam_dict[qp[0]] = True
+        else:
+            qparam_dict[qp[0]] = qp[1]
+
+    return qparam_dict
+
+
 def parse_request_line(request: str):
     pattern = r'(?P<verb>.*?) (?P<path>.*?) (?P<version>.*)'
     match = re.match(pattern, request)
 
     verb = match.group('verb')
-    path = match.group('path')
+    raw_path = match.group('path')
+    raw_path_split = raw_path.split('?', 1)
+    path = raw_path_split[0]
+    qparams = parse_qparams(re.split('&+', raw_path_split[1])) if len(raw_path_split) > 1 else dict()
     version = match.group('version')
 
-    return verb, path, version
+    return verb, path, version, qparams
 
 
 def parse_request(request: str):
@@ -23,7 +40,7 @@ def parse_request(request: str):
     body_separator = request_array.index('')
 
     request_line = request_array[request_line_index]
-    verb, path, version = parse_request_line(request_line)
+    verb, path, version, qparams = parse_request_line(request_line)
 
     headers_list = request_array[header_line_index:body_separator]
     headers = convert_list_headers_to_dictionary(headers_list)
@@ -31,8 +48,7 @@ def parse_request(request: str):
     content_array = request_array[body_separator + 1:]
     content = '\r\n'.join(content_array)
 
-    return HttpRequest(verb, path, version, headers, content)
-
+    return HttpRequest(verb, path, version, qparams, headers, content)
 
 
 def parse_header(header: str):
@@ -76,26 +92,3 @@ def parse_response(response: str):
     body = '\r\n'.join(body_array)
 
     return HttpResponse(version, code, status, headers, body)
-
-
-def parse_url(url):
-    pattern = r'(?:^(?P<protocol>.*)://)?(?P<host>.*?)(?::(?P<port>.*?))?(?P<path>/.*)?$'
-    match = re.match(pattern, url)
-
-    protocol = match.group('protocol')
-
-    host = match.group('host')
-
-    port = match.group('port')
-    if port is None:
-        port = 80
-    else:
-        port = int(port)
-    if port < 0 or port > 65535:  # it's not a valid port
-        raise PortOutOfRangeException(f"port '{port}' is out of range [0, 65535]")
-
-    path = match.group('path')
-    if path is None:
-        path = '/'
-
-    return protocol, host, port, path

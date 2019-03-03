@@ -15,7 +15,7 @@ from httpserver.io.File import File
 from httpserver.util.parser import parse_request
 
 
-def get_directory_contents(path, depth=0):
+def get_directory_contents(args, path, depth=0):
     """
     Get a generator containing a directory's contents.
     :param path: absolute path of directory the contents of which we want to view
@@ -33,26 +33,30 @@ def get_directory_contents(path, depth=0):
             files.append(file_path)
 
     for file in files:
+        if args.verbose:
+            print(f"Yielding file: {file}")
         yield File(file)
 
     for directory in directories:
-        yield Directory(directory, get_directory_contents(directory, depth + 1), depth + 1)
+        if args.verbose:
+            print(f"Yielding directory: {directory}")
+        yield Directory(directory, get_directory_contents(args, directory, depth + 1), depth + 1)
 
 
-def get_json_representation(path):
-    return json.dumps([x.__repr__() for x in get_directory_contents(path)])
+def get_json_representation(args, path):
+    return json.dumps([x.__repr__() for x in get_directory_contents(args, path)])
 
 
-def get_xml_representation(path):
-    return dicttoxml([x.__repr__() for x in get_directory_contents(path)], custom_root="structure", attr_type=False).decode("utf-8")
+def get_xml_representation(args, path):
+    return dicttoxml([x.__repr__() for x in get_directory_contents(args, path)], custom_root="structure", attr_type=False).decode("utf-8")
 
 
-def get_html_representation(path):
-    return ''.join([x.get_html() for x in get_directory_contents(path)])
+def get_html_representation(args, path):
+    return ''.join([x.get_html() for x in get_directory_contents(args, path)])
 
 
-def get_plain_text_representation(path):
-    return ''.join([x.get_plain_text() for x in get_directory_contents(path)])
+def get_plain_text_representation(args, path):
+    return ''.join([x.get_plain_text() for x in get_directory_contents(args, path)])
 
 
 content_types = {
@@ -64,34 +68,59 @@ content_types = {
 }
 
 
-def response(code, status, content, content_type):
-    return HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": content_type}, content).__repr__()
+def response(code, status, content, content_type="text/plain"):
+    return HttpResponse("HTTP/1.0", code, status, {"Content-Length": len(content), "Content-Type": content_type}, content)
 
 
-def list_directory(path: str, content_type: str):
+def list_directory(args, path, content_type):
     try:
-        content = content_types[content_type](path)
+        if args.verbose:
+            print(f"Listing directory at {path}")
+        content = content_types[content_type](args, path)
         return response(200, "OK", content, content_type)
     except FileNotFoundError as e:
+        if args.verbose:
+            print(f"Directory {path} does not exist.")
         return response(404, "Not Found", str(e), "text/plain")
     except NotADirectoryError as e:
+        if args.verbose:
+            print(f"{path} is not a directory.")
         return response(400, "Bad Request", str(e), "text/plain")
     except KeyError:
         content = "Cannot figure out how you want to see the data."
+        if args.verbose:
+            print(f"Valid Accept header not specified. Must be one of: [{', '.join(content_types.keys())}]")
         return response(400, "Bad Request", content, "text/plain")
 
 
-def get_file_contents(path):
+def get_file_contents(args, path):
     content, code, status = File(path).get_contents()
+    if args.verbose:
+        print(f"{code} {status}: {content if code is not 200 else f'Read file at {path}'}")
     return response(code, status, content, "text/plain")
 
 
-def get(path, request: HttpRequest):
+def get(args, request: HttpRequest):
     if request.path == '/':
         content_type = request.headers["Accept"].split(',')[0] if "Accept" in request.headers else "application/json"
-        return list_directory(path, content_type)
+        return list_directory(args, args.directory, content_type)
     else:
-        return get_file_contents(os.path.join(path, request.path[1:]))
+        res = get_file_contents(args, os.path.join(args.directory, request.path[1:]))
+
+        if 'download' in request.qparams:
+            split_path = request.path.split("/")
+            filename = split_path[len(split_path) - 1]
+            res.headers['Content-Disposition'] = 'attachment; filename="' + filename + '"'
+
+        return res
+
+
+def post(args, request: HttpRequest):
+    path = os.path.join(args.directory, request.path[1:])
+    content, code, status = File(path).write(request.content, 'overwrite' in request.qparams)
+    if args.verbose:
+        print(f"{code} {status}: {content}")
+    return response(code, status, content, "text/plain")
 
 
 def listen_to_client(client, address):
@@ -100,10 +129,11 @@ def listen_to_client(client, address):
     request = parse_request(data)
 
     if request.verb == 'GET':
-        response = get(args.directory, request)
-        client.sendall(bytes(response, "utf-8"))
+        response = get(args, request)
+        client.sendall(bytes(response.__repr__(), "utf-8"))
     elif request.verb == 'POST':
-        pass
+        response = post(args, request)
+        client.sendall(bytes(response.__repr__(), "utf-8"))
 
     client.close()
 
@@ -111,6 +141,7 @@ def listen_to_client(client, address):
 if __name__ == '__main__':
     parser = ArgParser()
     args = parser.parse_args()
+    args.directory = os.path.abspath(os.path.join(os.getcwd(), args.directory))
     print(args)
 
     port = args.port
@@ -126,20 +157,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         http_server.kill()
         print('\nTerminated')
-
-
-    # elif args.command == 'post':
-    #     (_, host, port, path) = parse_url(args.URL)
-    #     data = get_data(args)
-    #
-    #     request = HttpRequest(host, port, 'POST', path, convert_list_headers_to_dictionary(args.h), data)
-    #
-    #     response = post(request, args.v)
-    #
-    #     print_or_write(response.body, args)
-    #
-    # elif args.command == 'help':
-    #     show_help(args, parser)
-    #
-    # else:
-    #     parser.print_help()
