@@ -5,7 +5,7 @@ def parse_qparams(qparams_list: list):
     qparam_dict = {}
 
     for qparam in qparams_list:
-        qp = qparam.split("=")
+        qp = qparam.split('=', 1)
 
         if len(qp) == 1:
             qparam_dict[qp[0]] = True
@@ -21,9 +21,9 @@ def parse_request_line(request: str):
 
     verb = match.group('verb')
     raw_path = match.group('path')
-    raw_path_split = raw_path.split("?")
+    raw_path_split = raw_path.split('?', 1)
     path = raw_path_split[0]
-    qparams = parse_qparams(raw_path_split[1].split("&")) if len(raw_path_split) > 1 else dict()
+    qparams = parse_qparams(re.split('&+', raw_path_split[1])) if len(raw_path_split) > 1 else dict()
     version = match.group('version')
 
     return verb, path, version, qparams

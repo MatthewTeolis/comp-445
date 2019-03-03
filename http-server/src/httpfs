@@ -117,7 +117,7 @@ def get(args, request: HttpRequest):
 
 def post(args, request: HttpRequest):
     path = os.path.join(args.directory, request.path[1:])
-    content, code, status = File(path).write(request.content, args.overwrite)
+    content, code, status = File(path).write(request.content, 'overwrite' in request.qparams)
     if args.verbose:
         print(f"{code} {status}: {content}")
     return response(code, status, content, "text/plain")
@@ -141,6 +141,7 @@ def listen_to_client(client, address):
 if __name__ == '__main__':
     parser = ArgParser()
     args = parser.parse_args()
+    args.directory = os.path.abspath(os.path.join(os.getcwd(), args.directory))
     print(args)
 
     port = args.port

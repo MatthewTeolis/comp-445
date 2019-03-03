@@ -41,12 +41,6 @@ class ArgParser:
                  'Default is the current directory when launching the application.',
             dest='directory'
         )
-        self.parser.add_argument(
-            '-o',
-            action='store_true',
-            help='Overwrites file with request\'s content.',
-            dest='overwrite'
-        )
 
     def parse_args(self):
         return self.parser.parse_args()
