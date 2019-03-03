@@ -149,20 +149,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         http_server.kill()
         print('\nTerminated')
-
-
-    # elif args.command == 'post':
-    #     (_, host, port, path) = parse_url(args.URL)
-    #     data = get_data(args)
-    #
-    #     request = HttpRequest(host, port, 'POST', path, convert_list_headers_to_dictionary(args.h), data)
-    #
-    #     response = post(request, args.v)
-    #
-    #     print_or_write(response.body, args)
-    #
-    # elif args.command == 'help':
-    #     show_help(args, parser)
-    #
-    # else:
-    #     parser.print_help()

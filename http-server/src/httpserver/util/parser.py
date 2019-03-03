@@ -34,7 +34,6 @@ def parse_request(request: str):
     return HttpRequest(verb, path, version, headers, content)
 
 
-
 def parse_header(header: str):
     match = re.match(r'(?P<key>.*?):\s*(?P<value>.*)', header)
 
@@ -76,26 +75,3 @@ def parse_response(response: str):
     body = '\r\n'.join(body_array)
 
     return HttpResponse(version, code, status, headers, body)
-
-
-def parse_url(url):
-    pattern = r'(?:^(?P<protocol>.*)://)?(?P<host>.*?)(?::(?P<port>.*?))?(?P<path>/.*)?$'
-    match = re.match(pattern, url)
-
-    protocol = match.group('protocol')
-
-    host = match.group('host')
-
-    port = match.group('port')
-    if port is None:
-        port = 80
-    else:
-        port = int(port)
-    if port < 0 or port > 65535:  # it's not a valid port
-        raise PortOutOfRangeException(f"port '{port}' is out of range [0, 65535]")
-
-    path = match.group('path')
-    if path is None:
-        path = '/'
-
-    return protocol, host, port, path
