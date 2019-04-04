@@ -5,6 +5,8 @@ MAX_LEN = 1024
 
 DATA = 0
 ACK = 1
+SYN = 2
+SYN_ACK = 3
 
 
 class Packet:
@@ -29,7 +31,8 @@ class Packet:
         buf.extend(self.peer_ip_addr.packed)
         buf.extend(self.peer_port.to_bytes(2, byteorder='big'))
 
-        buf.extend(self.payload)
+        if self.payload is not None:
+            buf.extend(self.payload)
 
         return buf
 

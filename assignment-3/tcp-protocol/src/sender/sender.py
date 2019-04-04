@@ -7,12 +7,12 @@ import socket
 #     _buffer = list()
 #
 #
-from common.Packet import Packet, MAX_LEN, MIN_LEN, DATA
+from common.Packet import Packet, MAX_LEN, MIN_LEN, DATA, SYN, SYN_ACK, ACK
 
 
 class Sender:
 
-    def __init__(self, address, port, router_address, router_port, window_size=5):
+    def __init__(self, address, port, router_address, router_port, window_size=2):
         self._address = address
         self._port = port
         self._router_address = router_address
@@ -21,6 +21,22 @@ class Sender:
         self._sequence_size = 2 * window_size
         self._buffer = list()
         self._sequence_number = 0
+
+        self._conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.handshake()
+
+    def handshake(self):
+        self._conn.sendto(Packet(SYN, 0, address, port, None).to_bytes(), (self._router_address, self._router_port))
+        data, sender = self._conn.recvfrom(MAX_LEN)
+        packet = Packet.from_bytes(data)
+        if packet.packet_type == SYN_ACK:
+            response_packet = Packet(ACK, packet.seq_num + 1, packet.peer_ip_addr, packet.peer_port, None)
+            self._conn.sendto(response_packet.to_bytes(), (sender[0], sender[1]))
+
+
+    def handle_window(self):
+        while True:
+            pass
 
     def send_data(self, data: str):
         # if the data is too big, split data into multiple packets
@@ -55,12 +71,11 @@ class Sender:
         :param packet: Packet being sent
         :return: void
         """
-        conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         timeout = 5
         max_tries = 5
         count = 0
 
-        while True:
+        while count < max_tries:
             try:
                 conn.sendto(packet.to_bytes(), (self._router_address, self._router_port))
                 conn.settimeout(timeout)
@@ -68,8 +83,8 @@ class Sender:
                 print(response, sender)
             except socket.timeout:
                 count += 1
-                if count >= max_tries:
-                    break
+
+        conn.close()
 
     @staticmethod
     def chunk_data(data, length):
@@ -113,4 +128,5 @@ if __name__ == '__main__':
     # Sender().send_packet(packet)
     address = ipaddress.ip_address(socket.gethostbyname('localhost'))
     port = 8007
-    Sender(address, port, address, 3000).send_data(file_data)
+    # Sender(address, port, address, 3000).send_data(file_data)
+    s = Sender(address, port, 'localhost', 3000)
