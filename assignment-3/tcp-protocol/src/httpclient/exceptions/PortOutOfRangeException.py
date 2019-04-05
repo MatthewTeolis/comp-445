@@ -1,0 +1,2 @@
+class PortOutOfRangeException(Exception):
+    pass
